@@ -1,0 +1,3 @@
+[submodule "Gsplat"]
+	path = Gsplat
+	url = https://github.com/wuyize25/gsplat-unity

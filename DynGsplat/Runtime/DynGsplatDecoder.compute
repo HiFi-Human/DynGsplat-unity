@@ -1,0 +1,87 @@
+#define GROUP_SIZE 1024
+
+#pragma kernel UpdateOpacity
+#pragma kernel LoadBlockData
+#pragma kernel UpdateBlockData
+#pragma use_dxc
+
+int _SplatCount;
+StructuredBuffer<float> _OpacityBuffer;
+RWStructuredBuffer<float4> _ColorBuffer;
+
+[numthreads(GROUP_SIZE,1,1)]
+void UpdateOpacity(uint3 id : SV_DispatchThreadID)
+{
+    uint idx = id.x;
+    if (idx >= _SplatCount)
+        return;
+
+    _ColorBuffer[idx].a = _OpacityBuffer[idx];
+}
+
+RWStructuredBuffer<float> _SHBuffer;
+StructuredBuffer<int> _CanonicalIndex;
+
+StructuredBuffer<float> _CodebookColor;
+StructuredBuffer<float> _CodebookSH1;
+StructuredBuffer<float> _CodebookSH2;
+StructuredBuffer<float> _CodebookSH3;
+#define SH_COEFFS 15
+
+[numthreads(GROUP_SIZE, 1, 1)]
+void LoadBlockData(uint3 id : SV_DispatchThreadID)
+{
+    uint idx = id.x;
+    if (idx >= _SplatCount) return;
+    for (int i = 0; i < 3; i++)
+        _ColorBuffer[idx][i] = _CodebookColor[_CanonicalIndex[idx * 4 + 0] * (3 - 0) + i];
+    for (int i = 3; i < 12; i++)
+        _SHBuffer[idx * SH_COEFFS * 3 + i - 3] = _CodebookSH1[_CanonicalIndex[idx * 4 + 1] * (12 - 3) + i - 3];
+    for (int i = 12; i < 27; i++)
+        _SHBuffer[idx * SH_COEFFS * 3 + i - 3] = _CodebookSH2[_CanonicalIndex[idx * 4 + 2] * (27 - 12) + i - 12];
+    for (int i = 27; i < 48; i++)
+        _SHBuffer[idx * SH_COEFFS * 3 + i - 3] = _CodebookSH3[_CanonicalIndex[idx * 4 + 3] * (48 - 27) + i - 27];
+}
+
+StructuredBuffer<int> _ResidualIndex;
+int _LocalFrame;
+
+[numthreads(GROUP_SIZE / 4, 4, 1)]
+void UpdateBlockData(uint3 id : SV_DispatchThreadID)
+{
+    const int time_len = 19;
+    const int num_codebook = 4;
+    int offset = _LocalFrame - 1;
+
+    int addressBegin = offset * num_codebook + id.y == 0
+                           ? time_len * num_codebook
+                           : _ResidualIndex[offset * num_codebook + id.y - 1];
+    int addressEnd = _ResidualIndex[offset * num_codebook + id.y];
+
+    if (id.x >= (addressEnd - addressBegin) / 2) return;
+
+    int address = addressBegin + id.x * 2;
+
+    switch (id.y)
+    {
+    case 0:
+        for (int i = 0; i < 3; i++)
+            _ColorBuffer[_ResidualIndex[address]][i] = _CodebookColor[_ResidualIndex[address + 1] * (3 - 0) + i];
+        break;
+    case 1:
+        for (int i = 3; i < 12; i++)
+            _SHBuffer[_ResidualIndex[address] * SH_COEFFS * 3 + i - 3] =
+                _CodebookSH1[_ResidualIndex[address + 1] * (12 - 3) + i - 3];
+        break;
+    case 2:
+        for (int i = 12; i < 27; i++)
+            _SHBuffer[_ResidualIndex[address] * SH_COEFFS * 3 + i - 3] =
+                _CodebookSH2[_ResidualIndex[address + 1] * (27 - 12) + i - 12];
+        break;
+    case 3:
+        for (int i = 27; i < 48; i++)
+            _SHBuffer[_ResidualIndex[address] * SH_COEFFS * 3 + i - 3] =
+                _CodebookSH3[_ResidualIndex[address + 1] * (48 - 27) + i - 27];
+        break;
+    }
+}
