@@ -27,7 +27,7 @@ It will compress the PLY sequences into DGS format, which consists of a `.dgs` m
 
 ### Install and Setup
 
-The unity package DynGsplat depends on [wuyize25/gsplat-unity](https://github.com/wuyize25/gsplat-unity), please install and setup the Gsplat package following [Gsplat/README](Gsplat/README.md). Then install the DynGsplat package (DynGsplat/package.json). DynGsplat also depends on Unity's Addressables package. If you haven't installed it before, Addressables will be installed automatically when you install DynGsplat. However, you need to complete the initial configuration for Addressables before using DynGsplat: click `Window > Asset Management > Addressables > Groups`, and then click "Create Addressables Settings" in the window that appears.
+The unity package DynGsplat depends on [wuyize25/gsplat-unity](https://github.com/wuyize25/gsplat-unity), please install and setup the Gsplat package following [Gsplat/README.md](https://github.com/wuyize25/gsplat-unity/blob/main/README.md). Then install the DynGsplat package (DynGsplat/package.json). DynGsplat also depends on Unity's Addressables package. If you haven't installed it before, Addressables will be installed automatically when you install DynGsplat. However, you need to complete the initial configuration for Addressables before using DynGsplat: click `Window > Asset Management > Addressables > Groups`, and then click "Create Addressables Settings" in the window that appears.
 
 ### Import Assets
 
@@ -47,7 +47,8 @@ Create a new `Game Object` in the scene, then add and configure the `Dyn Gsplat 
 
 ## License
 
-This project is released under the TODO license. It is built upon several other open-source projects:
+This project is released under the [DynGsplat-unity LICENSE](LICENSE.md). It is built upon several other open-source projects:
 
 - [wuyize25/gsplat-unity](https://github.com/wuyize25/gsplat-unity), MIT License (c) 2025 Yize Wu
+- [KeKsBoTer/c3dgs](https://github.com/KeKsBoTer/c3dgs)
 
