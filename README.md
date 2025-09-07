@@ -1,6 +1,6 @@
 # DynGsplat
 
-This repository contains code for compressing 3DGS PLY sequences and a Unity package for rendering and playing the compressed sequences in Unity.
+This repository contains code for compressing 3DGS PLY sequences and a Unity package for rendering and playing the compressed sequences in Unity. The Unity package depends on [wuyize25/gsplat-unity](https://github.com/wuyize25/gsplat-unity), which is also included in the repository as a submodule.
 
 ## Compress
 
@@ -19,4 +19,35 @@ python compress.py \
 |-----------|------|-------------|
 | <code style="white-space: nowrap;">--st</code> | int | Start frame number. |
 | <code style="white-space: nowrap;">--ed</code> | int | End frame number. |
-| <code style="white-space: nowrap;">--len_block</code> | int | An index file contains how many frames.  |
+| <code style="white-space: nowrap;">--len_block</code> | int | Block size. A block contains how many frames. |
+
+It will compress the PLY sequences into DGS format, which consists of a `.dgs` metadata file and a `Data` folder.
+
+## Usage of the Unity Package
+
+### Install and Setup
+
+The unity package DynGsplat depends on [wuyize25/gsplat-unity](https://github.com/wuyize25/gsplat-unity), please install and setup the Gsplat package following [Gsplat/README](Gsplat/README.md). Then install the DynGsplat package (DynGsplat/package.json). DynGsplat also depends on Unity's Addressables package. If you haven't installed it before, Addressables will be installed automatically when you install DynGsplat. However, you need to complete the initial configuration for Addressables before using DynGsplat: click `Window > Asset Management > Addressables > Groups`, and then click "Create Addressables Settings" in the window that appears.
+
+### Import Assets
+
+Copy the folder containing the `.dgs` file to any location within your Unity project's `Assets` folder (except for a `Resources` folder). Then, when you open the project, Unity will complete the asset import. If you want to import the asset while the project is already open, first copy the `Data` folder (located at the same level as the `.dgs` file) into the project. Wait for Unity to finish importing the `Data` folder, and then copy the `.dgs` file into the project. This will prevent Unity from importing the `.dgs` file before the `Data` folder is fully imported.
+
+After each `.dgs` asset is successfully imported, it will generate a "Dyn Gsplat Asset". This asset will be automatically added to an Addressables Group named "DynGsplat Assets". This group is automatically configured to be included in the build, so no extra configuration is needed for packaging.
+
+### Add Dyn Gsplat Renderer
+
+Create a new `Game Object` in the scene, then add and configure the `Dyn Gsplat Renderer` component for it. At runtime, all frames will be loaded into memory, so please ensure you have enough available memory.
+
+| Property      | Description                                 |
+| ------------- | ------------------------------------------- |
+| Asset Ref     | Assign the `Dyn Gsplat Asset` to be played. |
+| Async Loading | Toggles asynchronous loading on or off.     |
+| Is Playing    | Plays/Pauses the playback.                  |
+
+## License
+
+This project is released under the TODO license. It is built upon several other open-source projects:
+
+- [wuyize25/gsplat-unity](https://github.com/wuyize25/gsplat-unity), MIT License (c) 2025 Yize Wu
+
