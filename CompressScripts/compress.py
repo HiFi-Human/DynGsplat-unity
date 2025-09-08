@@ -5,23 +5,18 @@ import os
 from tqdm import tqdm
 import torch
 from dataclasses import dataclass
-import math
-import time
-import torch
 from torch import nn
 from torch_scatter import scatter
 from typing import Tuple, Optional
 from tqdm import trange
 import copy
 import gc
-from scene.gaussian_model import GaussianModel
-from utils.splats import to_full_cov, extract_rot_scale
+
 from weighted_distance._C import weightedDistance
 from torch.optim import Adam
 import struct
-import json
-import pickle
 import argparse
+import json
 
 np.set_printoptions(threshold=np.inf) 
 class VectorQuantize(nn.Module):
@@ -290,18 +285,35 @@ parser.add_argument("--ed", type=int, default=100)
 parser.add_argument("--len_block", type=int, default=20)
 
 args = parser.parse_args()
-data_path = args.data_path
-fixed_codebook_size =  args.codebook_size # 2**14
 
-save_path=args.output_path
+data_path = args.data_path
+# data_path ="/data/new_disk6/guochch/big_scene/zhangjiang_old"
+# "/data/new_disk4/jyh/output/dualgs/0508_xyz_base3_0_control_points/ckt"
+# "/data/new_disk4/jyh/output/dualgs/0506_jyf_0_control_points/ckt"
+
+
+# /data/new_disk4/jyh/output/0515_coser4_0_control_points/ckt
+fixed_codebook_size =  args.codebook_size# 2**14
+
+save_path=os.path.join(args.output_path,"Data")
+
 os.makedirs(save_path, exist_ok=True)
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 start_all=args.st
 end_all=args.ed
 len_block=args.len_block
 num_block=(end_all-start_all+1)//len_block
 
+dgs_dict ={}
+dgs_dict["fps"] = 30
+dgs_dict["frame_count"] = end_all - start_all + 1
+dgs_dict["block_size"] = len_block
+dgs_dict["data_path"] = "Data"
+dgs_dict["ply_offset"] = start_all
 
-
+with open(os.path.join(args.output_path,"Bass.dgs"), 'w') as f:
+    json.dump(dgs_dict, f, ensure_ascii=False, indent=2)
+    
 for seg in range(0,num_block):
     print(seg ,"in",num_block)
     start = seg*len_block+start_all
@@ -342,6 +354,8 @@ for seg in range(0,num_block):
         tmp= np.concatenate((tmp, data_os), axis=-1)
     
         write_ply_rot(tmp,os.path.join(save_path,'point_cloud_%d' % i))
+
+
 
         pointcloud_list_rgb.append(data_rgb)
         pointcloud_list_sh_1.append(data_sh_1)
@@ -555,5 +569,5 @@ for seg in range(0,num_block):
         for time_dict in index_save_dict:
             for arr in time_dict:
                 arr.tofile(f)
-    print(header[0])
+    
 

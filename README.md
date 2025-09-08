@@ -7,7 +7,47 @@ This repository contains code for compressing 3DGS PLY sequences and a Unity pac
 - [x] RGB & SH compression based on codebook
 - [ ] Video based compression
 
+## Setup
+
+Our provided install method is based on Conda package and environment management:
+
+Create a new environment
+```shell
+conda create -n compress python=3.9
+conda activate compress
+```
+First install CUDA and PyTorch, our code is evaluated on CUDA 12.1 and PyTorch 2.1.2+cu121. Then install the following dependencies:
+```shell
+cd CompressScripts/
+pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu121
+pip install weighted_distance/             
+pip install -r requirements.txt
+```
+
+
 ## Compress
+
+### Setup
+
+Our provided install method is based on Conda package and environment management:
+
+Create a new environment
+```shell
+conda create -n compress python=3.9
+conda activate compress
+```
+First install CUDA and PyTorch, our code is evaluated on CUDA 12.1 and PyTorch 2.1.2+cu121. Then install the following dependencies:
+```shell
+cd CompressScripts/
+pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu121
+pip install weighted_distance/             
+pip install -r requirements.txt
+```
+### Run
+
+We split the PLY sequence into blocks at fixed intervals.
+For each block, we learn RGB and SH codebooks via vector quantization and obtain indices.
+Using the first frame’s indices as the baseline, later frames store only sparse differences as (index, value) pairs.
 
 ```shell
 python compress.py \
