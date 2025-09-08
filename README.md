@@ -7,23 +7,6 @@ This repository contains code for compressing 3DGS PLY sequences and a Unity pac
 - [x] RGB & SH compression based on codebook
 - [ ] Video based compression
 
-## Setup
-
-Our provided install method is based on Conda package and environment management:
-
-Create a new environment
-```shell
-conda create -n compress python=3.9
-conda activate compress
-```
-First install CUDA and PyTorch, our code is evaluated on CUDA 12.1 and PyTorch 2.1.2+cu121. Then install the following dependencies:
-```shell
-cd CompressScripts/
-pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu121
-pip install weighted_distance/             
-pip install -r requirements.txt
-```
-
 
 ## Compress
 
@@ -49,6 +32,7 @@ We split the PLY sequence into blocks at fixed intervals.
 For each block, we learn RGB and SH codebooks via vector quantization and obtain indices.
 Using the first frame’s indices as the baseline, later frames store only sparse differences as (index, value) pairs.
 
+For more detail, please refer to [DualGS Paper Section 4 COMPRESSION](https://arxiv.org/pdf/2409.08353).
 ```shell
 python compress.py \
   --data_path <path to ply path> \
@@ -56,7 +40,8 @@ python compress.py \
   --st 0 \
   --ed 99 \
   --codebook_size 2**14+1 \
-  --len_block 20
+  --len_block 20 \
+  --data_name Bass
 ```
 
 ### Core Parameters
@@ -65,6 +50,8 @@ python compress.py \
 | <code style="white-space: nowrap;">--st</code> | int | Start frame number. |
 | <code style="white-space: nowrap;">--ed</code> | int | End frame number. |
 | <code style="white-space: nowrap;">--len_block</code> | int | Block size. A block contains how many frames. |
+| <code style="white-space: nowrap;">--codebook_size</code> | int | Number of entries in the codebook. Must not exceed the index dtype’s max value.|
+| <code style="white-space: nowrap;">--data_name</code> | str | Name of the .dgs file |
 
 It will compress the PLY sequences into DGS format, which consists of a `.dgs` metadata file and a `Data` folder.
 

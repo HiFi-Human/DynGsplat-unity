@@ -283,17 +283,14 @@ parser.add_argument("--output_path", type=str, default="./output")
 parser.add_argument("--st", type=int, default=0)
 parser.add_argument("--ed", type=int, default=100)
 parser.add_argument("--len_block", type=int, default=20)
+parser.add_argument("--data_name", type=str, default="Bass")
+
 
 args = parser.parse_args()
 
 data_path = args.data_path
-# data_path ="/data/new_disk6/guochch/big_scene/zhangjiang_old"
-# "/data/new_disk4/jyh/output/dualgs/0508_xyz_base3_0_control_points/ckt"
-# "/data/new_disk4/jyh/output/dualgs/0506_jyf_0_control_points/ckt"
 
-
-# /data/new_disk4/jyh/output/0515_coser4_0_control_points/ckt
-fixed_codebook_size =  args.codebook_size# 2**14
+fixed_codebook_size =  args.codebook_size
 
 save_path=os.path.join(args.output_path,"Data")
 
@@ -302,7 +299,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 start_all=args.st
 end_all=args.ed
 len_block=args.len_block
-num_block=(end_all-start_all+1)//len_block
+num_block=(end_all-start_all+1+len_block-1)//len_block
 
 dgs_dict ={}
 dgs_dict["fps"] = 30
@@ -311,13 +308,13 @@ dgs_dict["block_size"] = len_block
 dgs_dict["data_path"] = "Data"
 dgs_dict["ply_offset"] = start_all
 
-with open(os.path.join(args.output_path,"Bass.dgs"), 'w') as f:
+with open(os.path.join(args.output_path,f"{args.data_name}.dgs"), 'w') as f:
     json.dump(dgs_dict, f, ensure_ascii=False, indent=2)
     
 for seg in range(0,num_block):
     print(seg ,"in",num_block)
     start = seg*len_block+start_all
-    end = ((seg+1)*len_block+start_all)
+    end = min(((seg+1)*len_block+start_all),end_all+1)
 
     pointcloud_list_rgb = []
     pointcloud_list_sh_1 = []
