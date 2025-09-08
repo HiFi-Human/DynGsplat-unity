@@ -2,6 +2,11 @@
 
 This repository contains code for compressing 3DGS PLY sequences and a Unity package for rendering and playing the compressed sequences in Unity. The Unity package depends on [wuyize25/gsplat-unity](https://github.com/wuyize25/gsplat-unity), which is also included in the repository as a submodule.
 
+## TODO
+
+- [x] RGB & SH compression based on codebook
+- [ ] Video based compression
+
 ## Compress
 
 ```shell
@@ -51,4 +56,21 @@ This project is released under the [DynGsplat-unity LICENSE](LICENSE.md). It is 
 
 - [wuyize25/gsplat-unity](https://github.com/wuyize25/gsplat-unity), MIT License (c) 2025 Yize Wu
 - [KeKsBoTer/c3dgs](https://github.com/KeKsBoTer/c3dgs)
+
+## Citation
+
+If you find this code useful for your research, please cite us using the following BibTeX entry. 
+
+```bibtex
+@article{jiang2024robust,
+  title={Robust dual gaussian splatting for immersive human-centric volumetric videos},
+  author={Jiang, Yuheng and Shen, Zhehao and Hong, Yu and Guo, Chengcheng and Wu, Yize and Zhang, Yingliang and Yu, Jingyi and Xu, Lan},
+  journal={ACM Transactions on Graphics (TOG)},
+  volume={43},
+  number={6},
+  pages={1--15},
+  year={2024},
+  publisher={ACM New York, NY, USA}
+}
+```
 
