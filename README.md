@@ -5,6 +5,7 @@ This repository contains code for compressing 3DGS PLY sequences and a Unity pac
 ## TODO
 
 - [x] RGB & SH compression based on codebook
+- [ ] Position compression based on [Draco](https://github.com/google/draco)
 - [ ] Video based compression
 
 
@@ -100,6 +101,22 @@ If you find this code useful for your research, please cite us using the followi
   pages={1--15},
   year={2024},
   publisher={ACM New York, NY, USA}
+}
+
+@InProceedings{Jiang2025reperformer,
+    author={Jiang, Yuheng and Shen, Zhehao and Guo, Chengcheng and Hong, Yu and Su, Zhuo and Zhang, Yingliang and Habermann, Marc and Xu, Lan},
+    title={RePerformer: Immersive Human-centric Volumetric Videos from Playback to Photoreal Reperformance},
+    booktitle={Proceedings of the Computer Vision and Pattern Recognition Conference (CVPR)},
+    month={June},
+    year={2025},
+    pages={11349-11360}
+}
+
+@article{hong2025beam,
+  title={BEAM: Bridging Physically-based Rendering and Gaussian Modeling for Relightable Volumetric Video},
+  author={Hong, Yu and Wu, Yize and Shen, Zhehao and Guo, Chengcheng and Jiang, Yuheng and Zhang, Yingliang and Yu, Jingyi and Xu, Lan},
+  journal={arXiv preprint arXiv:2502.08297},
+  year={2025}
 }
 ```
 
