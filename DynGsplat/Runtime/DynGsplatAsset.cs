@@ -18,6 +18,7 @@ namespace DynGsplat
         public uint CodebookSH2Size;
         public uint CodebookSH3Size;
         public uint BlockSize;
+        [HideInInspector] public AssetReferenceT<DynGplatBlockAsset>[] Blocks;
         public uint BlockCount => (uint)Math.Ceiling((double)FrameCount / BlockSize);
         public float Duration => FrameCount / FPS;
     }

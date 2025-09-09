@@ -8,6 +8,16 @@ This repository contains code for compressing 3DGS PLY sequences and a Unity pac
 - [ ] Position compression based on [Draco](https://github.com/google/draco)
 - [ ] Video based compression
 
+## Changelog
+
+### v1.1.0 - 2025/09/12
+
+- Added a streaming option that, when enabled, no longer loads all frame data into memory.
+- The DGS file format has been changed. The old file version is no longer supported.
+
+### v1.0.0 - 2025/09/10
+
+- The initial release
 
 ## Compress
 
@@ -65,18 +75,17 @@ The unity package DynGsplat depends on [wuyize25/gsplat-unity](https://github.co
 
 ### Import Assets
 
-Copy the folder containing the `.dgs` file to any location within your Unity project's `Assets` folder (except for a `Resources` folder). Then, when you open the project, Unity will complete the asset import. If you want to import the asset while the project is already open, first copy the `Data` folder (located at the same level as the `.dgs` file) into the project. Wait for Unity to finish importing the `Data` folder, and then copy the `.dgs` file into the project. This will prevent Unity from importing the `.dgs` file before the `Data` folder is fully imported.
-
-After each `.dgs` asset is successfully imported, it will generate a "Dyn Gsplat Asset". This asset will be automatically added to an Addressables Group named "DynGsplat Assets". This group is automatically configured to be included in the build, so no extra configuration is needed for packaging.
+Copy or drag & drop the folder containing the `.dgs` file to any location within your Unity project's `Assets` folder (except for a `Resources` folder). This package will then automatically read the files and import the `.dgs` file as a `Dyn Gsplat Asset` and `.dgsblk` files as `Dyn Gsplat Block Assets`. The imported assets will be automatically added to an Addressables Group named "DynGsplat Assets". This group is automatically configured to be included in the build, so no extra configuration is needed for packaging.
 
 ### Add Dyn Gsplat Renderer
 
-Create a new `Game Object` in the scene, then add and configure the `Dyn Gsplat Renderer` component for it. At runtime, all frames will be loaded into memory, so please ensure you have enough available memory.
+Create a new `Game Object` in the scene, then add and configure the `Dyn Gsplat Renderer` component for it. Please note, to ensure that a `Dyn Gsplat Renderer` truly occupies only two blocks of memory when `Streaming` is enabled, you need to make sure the Bundle Mode for the `DynGsplat Assets` Addressables Group is set to "Pack Separately". The new version will automatically set this when creating the `DynGsplat Assets` Addressables Group.
 
 | Property        | Description                                                  |
 | --------------- | ------------------------------------------------------------ |
 | Asset Ref       | Assign the `Dyn Gsplat Asset` to be played.                  |
 | Async Loading   | Toggles asynchronous loading on or off.                      |
+| Streaming       | When disabled, all frame data is loaded into memory at runtime; when enabled, it uses at most the memory size of two blocks. |
 | Is Playing      | Plays/Pauses the playback.                                   |
 | Gamma To Linear | Coverts color space. See [Gsplat/README.md](https://github.com/wuyize25/gsplat-unity/blob/main/README.md). |
 

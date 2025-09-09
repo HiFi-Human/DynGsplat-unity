@@ -17,8 +17,10 @@ from torch.optim import Adam
 import struct
 import argparse
 import json
+import zipfile
 
-np.set_printoptions(threshold=np.inf) 
+
+np.set_printoptions(threshold=np.inf)
 class VectorQuantize(nn.Module):
     def __init__(
         self,
@@ -164,7 +166,7 @@ def compress_color(
 
 def optimize_codebook(data, initial_indices, initial_codebook, num_iterations=1000):
     if isinstance(initial_codebook, torch.Tensor):
-        initial_codebook = initial_codebook.detach().cpu().numpy() 
+        initial_codebook = initial_codebook.detach().cpu().numpy()
     codebook = torch.tensor(initial_codebook, dtype=torch.float32, device='cuda', requires_grad=True)
     optimizer = Adam([codebook], lr=0.01)
     for iteration in range(num_iterations):
@@ -215,19 +217,19 @@ def write_ply_rot(vertex_matrix,output_file):
     for i in range(3):
         attribute_names.append('scale_' + str(i))
     attribute_names.append('opacity')
-    
+
     assert k == len(attribute_names)
-    
+
     n, k = vertex_matrix.shape
-   
+
     with open(output_file, 'wb') as ply_file:
         ply_file.write(b"ply\n")
         ply_file.write(b"format binary_little_endian 1.0\n")
         ply_file.write(b"element vertex %d\n" % n)
-        
+
         for attribute_name in attribute_names:
             ply_file.write(b"property float %s\n" % attribute_name.encode())
-        
+
         ply_file.write(b"end_header\n")
         for i in range(n):
             rot = vertex_matrix[i,3:7]
@@ -252,23 +254,23 @@ def write_ply_with_attributes(vertex_matrix, output_file):
     attribute_names.append('opacity')
     for i in range(3):
         attribute_names.append('scale_' + str(i))
-    
+
     for i in range(4):
         attribute_names.append('rot_' + str(i))
 
     assert k == len(attribute_names)
-    
+
     n, k = vertex_matrix.shape
     with open(output_file, 'wb') as ply_file:
         ply_file.write(b"ply\n")
         ply_file.write(b"format binary_little_endian 1.0\n")
         ply_file.write(b"element vertex %d\n" % n)
-        
+
         for attribute_name in attribute_names:
             ply_file.write(b"property float %s\n" % attribute_name.encode())
-        
+
         ply_file.write(b"end_header\n")
-        
+
         for i in range(n):
             rot = vertex_matrix[i,-4:]
             vertex_matrix[i,-4:] = rot / np.linalg.norm(rot)
@@ -295,13 +297,13 @@ fixed_codebook_size =  args.codebook_size
 save_path=os.path.join(args.output_path,"Data")
 
 os.makedirs(save_path, exist_ok=True)
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 start_all=args.st
 end_all=args.ed
 len_block=args.len_block
 num_block=(end_all-start_all+1+len_block-1)//len_block
 
 dgs_dict ={}
+dgs_dict["version"] = "1.1"
 dgs_dict["fps"] = 30
 dgs_dict["frame_count"] = end_all - start_all + 1
 dgs_dict["block_size"] = len_block
@@ -310,7 +312,7 @@ dgs_dict["ply_offset"] = start_all
 
 with open(os.path.join(args.output_path,f"{args.data_name}.dgs"), 'w') as f:
     json.dump(dgs_dict, f, ensure_ascii=False, indent=2)
-    
+
 for seg in range(0,num_block):
     print(seg ,"in",num_block)
     start = seg*len_block+start_all
@@ -338,28 +340,26 @@ for seg in range(0,num_block):
             sh[...,j*3+0]=data_sh[...,(j-1)+3]
             sh[...,j*3+1]=data_sh[...,(j-1)+SH_N+2]
             sh[...,j*3+2]=data_sh[...,(j-1)+2*SH_N+1]
-        
+
         data_rgb = sh[...,0:3]
         data_sh_1 = sh[...,3:12]
         data_sh_2 = sh[...,12:27]
         data_sh_3 = sh[...,27:48]
         data_os = copy.deepcopy(data[...,[55,56,57,54]])
-        
+
         tmp = data[...,[0,1,2,58,59,60,61]]
         data_os[..., -1] = sigmoid(data_os[..., -1])
         data_os[..., 0:3] = np.exp(data_os[..., 0:3])
         tmp= np.concatenate((tmp, data_os), axis=-1)
-    
-        write_ply_rot(tmp,os.path.join(save_path,'point_cloud_%d' % i))
 
-
+        write_ply_rot(tmp,os.path.join(save_path,f'point_cloud_{i - start}.ply'))
 
         pointcloud_list_rgb.append(data_rgb)
         pointcloud_list_sh_1.append(data_sh_1)
         pointcloud_list_sh_2.append(data_sh_2)
         pointcloud_list_sh_3.append(data_sh_3)
         pointcloud_list_os.append(data_os)
-    
+
     print(data[0].size)
     concatenated_data_rgb = np.concatenate(pointcloud_list_rgb, axis=0)
     concatenated_data_sh_1 = np.concatenate(pointcloud_list_sh_1, axis=0)
@@ -466,7 +466,7 @@ for seg in range(0,num_block):
         end_index = start_index + point_per_time if time_index != end-1 else None
         split_indices = sh_1_indices[start_index:end_index]
         split_indice_list["sh_1"].append(split_indices)
-    
+
 
     for time_index in range(start,end):
         point_per_time = int(concatenated_data_tensor_sh_2.shape[0]/(end-start))
@@ -474,7 +474,7 @@ for seg in range(0,num_block):
         end_index = start_index + point_per_time if time_index != end-1 else None
         split_indices = sh_2_indices[start_index:end_index]
         split_indice_list["sh_2"].append(split_indices)
-        
+
 
     for time_index in range(start,end):
         point_per_time = int(concatenated_data_tensor_sh_3.shape[0]/(end-start))
@@ -518,10 +518,10 @@ for seg in range(0,num_block):
 
 
 
-    np.array(save_dict["{}_codebook".format("rgb")]).tofile(os.path.join(save_path,"codebook_rgb_{}.bytes".format(seg)))
-    np.array(save_dict["{}_codebook".format("sh_1")]).tofile(os.path.join(save_path,"codebook_sh_1_{}.bytes".format(seg)))
-    np.array(save_dict["{}_codebook".format("sh_2")]).tofile(os.path.join(save_path,"codebook_sh_2_{}.bytes".format(seg)))
-    np.array(save_dict["{}_codebook".format("sh_3")]).tofile(os.path.join(save_path,"codebook_sh_3_{}.bytes".format(seg)))
+    np.array(save_dict["{}_codebook".format("rgb")]).tofile(os.path.join(save_path,"codebook_rgb.bytes"))
+    np.array(save_dict["{}_codebook".format("sh_1")]).tofile(os.path.join(save_path,"codebook_sh_1.bytes"))
+    np.array(save_dict["{}_codebook".format("sh_2")]).tofile(os.path.join(save_path,"codebook_sh_2.bytes"))
+    np.array(save_dict["{}_codebook".format("sh_3")]).tofile(os.path.join(save_path,"codebook_sh_3.bytes"))
 
     print(save_dict["{}_codebook".format("sh_1")].size)
     print(save_dict["{}_codebook".format("sh_2")].size)
@@ -537,21 +537,21 @@ for seg in range(0,num_block):
     canoical_index_dict=np.array(canoical_index_dict)
     canoical_index_dict=np.transpose(canoical_index_dict)
 
-    canoical_index_dict.tofile(os.path.join(save_path,"canonical_index_{}.bytes".format(seg)))
+    canoical_index_dict.tofile(os.path.join(save_path,"canonical_index.bytes"))
 
     index_save_dict=[]
     header=[]
     number=np.uint8(end-start-1)
     print(number)
     offset = number * 4
-    
+
     for time_index in range(start+1,end):
         time_dict=[]
         time_dict.append(np.array(residual_indices["rgb"][time_index-start-1],dtype=np.int32))
         time_dict.append(np.array(residual_indices["sh_1"][time_index-start-1],dtype=np.int32))
         time_dict.append(np.array(residual_indices["sh_2"][time_index-start-1],dtype=np.int32))
         time_dict.append(np.array(residual_indices["sh_3"][time_index-start-1],dtype=np.int32))
-        
+
         index_save_dict.append(time_dict)
         offset_1 = offset + 2*len(residual_indices["rgb"][time_index-start-1])
         offset_2 = offset_1 + 2*len(residual_indices["sh_1"][time_index-start-1])
@@ -561,10 +561,30 @@ for seg in range(0,num_block):
         offset = offset_4
 
     header=np.array(header,dtype=np.int32)
-    with open(os.path.join(save_path,"index_{}.bytes".format(seg)), 'w') as f:
+    with open(os.path.join(save_path,"index.bytes"), 'w') as f:
         header.tofile(f)
         for time_dict in index_save_dict:
             for arr in time_dict:
                 arr.tofile(f)
-    
+
+    files_to_zip = []
+    for i in range(start, end):
+        files_to_zip.append(os.path.join(save_path, f'point_cloud_{i - start}.ply'))
+
+    files_to_zip.append(os.path.join(save_path, "codebook_rgb.bytes"))
+    files_to_zip.append(os.path.join(save_path, "codebook_sh_1.bytes"))
+    files_to_zip.append(os.path.join(save_path, "codebook_sh_2.bytes"))
+    files_to_zip.append(os.path.join(save_path, "codebook_sh_3.bytes"))
+    files_to_zip.append(os.path.join(save_path, "canonical_index.bytes"))
+    files_to_zip.append(os.path.join(save_path, "index.bytes"))
+
+    zip_path = os.path.join(save_path, f"Block{seg}.dgsblk")
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for file in files_to_zip:
+            if os.path.exists(file):
+                zipf.write(file, arcname=os.path.basename(file))
+
+    for file in files_to_zip:
+        if os.path.exists(file):
+            os.remove(file)
 

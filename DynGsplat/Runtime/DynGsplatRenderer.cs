@@ -19,6 +19,7 @@ namespace DynGsplat
 
         public AssetReferenceT<DynGsplatAsset> AssetRef;
         public bool AsyncLoading = true;
+        public bool Streaming = true;
         public bool IsPlaying = true;
         public bool GammaToLinear;
 
@@ -41,14 +42,24 @@ namespace DynGsplat
         GraphicsBuffer m_codebookSH1;
         GraphicsBuffer m_codebookSH2;
         GraphicsBuffer m_codebookSH3;
-        
+
         public uint CurrentFrame { get; private set; }
         float m_currentTime = 0;
         uint m_prevFrame = uint.MaxValue;
 
+        const uint k_slidingWindowSize = 2;
+        uint m_slidingWindowIndex = k_slidingWindowSize - 1;
         uint CurrentBlockIndex => CurrentFrame / m_asset.BlockSize;
         uint CurrentLocalFrameIndex => CurrentFrame % m_asset.BlockSize;
-        DynGplatBlockAsset CurrentBlock => m_blocks[CurrentBlockIndex].Asset;
+
+        DynGplatBlockAsset CurrentBlock =>
+            m_blocks[Streaming
+#if UNITY_EDITOR
+                     && Application.isPlaying
+#endif
+                ? m_slidingWindowIndex
+                : CurrentBlockIndex].Asset;
+
         DynGsplatFrameAsset CurrentFrameAsset => CurrentBlock.Frames[CurrentLocalFrameIndex];
 
         public bool Valid =>
@@ -82,64 +93,89 @@ namespace DynGsplat
         {
             try
             {
-                m_assetHandle = AssetRef.LoadAssetAsync();
-                await m_assetHandle.Task;
-                token.ThrowIfCancellationRequested();
+                m_asset = (DynGsplatAsset)AssetRef.Asset;
+                if (!m_asset)
+                {
+                    m_assetHandle = AssetRef.LoadAssetAsync();
+                    await m_assetHandle.Task;
+                    token.ThrowIfCancellationRequested();
 
-                if (m_assetHandle.Status != AsyncOperationStatus.Succeeded)
-                    throw new Exception("Failed to load asset");
+                    if (m_assetHandle.Status != AsyncOperationStatus.Succeeded)
+                        throw new Exception("Failed to load asset");
 
-                m_asset = m_assetHandle.Result;
-                m_blocks = new Block[m_asset.BlockCount];
+                    m_asset = m_assetHandle.Result;
+                }
+
+                var blockCount = Streaming ? Math.Min(k_slidingWindowSize, m_asset.BlockCount) : m_asset.BlockCount;
+#if UNITY_EDITOR
+                m_blocks = new Block[Application.isPlaying ? blockCount : 1];
+#else
+                m_blocks = new Block[blockCount];
+#endif
                 for (var i = 0; i < m_blocks.Length; i++)
                 {
-                    var reference = new AssetReferenceT<DynGplatBlockAsset>(AssetRef.AssetGUID)
-                    {
-                        SubObjectName = $"Block{i}"
-                    };
-                    m_blocks[i].Handle = Addressables.LoadAssetAsync<DynGplatBlockAsset>(reference);
+                    m_blocks[i].Handle = Addressables.LoadAssetAsync<DynGplatBlockAsset>(m_asset.Blocks[i]);
                     await m_blocks[i].Handle.Task;
                     token.ThrowIfCancellationRequested();
                     if (m_blocks[i].Handle.Status != AsyncOperationStatus.Succeeded)
                         throw new Exception($"Failed to load block {i}");
                     m_blocks[i].Asset = m_blocks[i].Handle.Result;
                 }
-
+                
                 CreateResourcesForAsset();
+                UpdateBuffers();
             }
             catch (OperationCanceledException)
             {
             }
         }
 
+        async Task LoadBlockAsync()
+        {
+            var targetBlockIndex = (CurrentBlockIndex + k_slidingWindowSize - 1) % m_asset.BlockCount;
+            var index = (m_slidingWindowIndex + 1) % k_slidingWindowSize;
+
+            m_blocks[index].Asset = null;
+            if (m_blocks[index].Handle.IsValid())
+                Addressables.Release(m_blocks[index].Handle);
+
+            var handle = Addressables.LoadAssetAsync<DynGplatBlockAsset>(m_asset.Blocks[targetBlockIndex]);
+
+            await handle.Task;
+            if (handle.Status != AsyncOperationStatus.Succeeded)
+                throw new Exception($"Failed to load block {targetBlockIndex}");
+            m_blocks[index].Asset = handle.Result;
+            m_blocks[index].Handle = handle;
+        }
+
         void LoadAssetSync()
         {
-            m_assetHandle = AssetRef.LoadAssetAsync();
-            m_assetHandle.WaitForCompletion();
-            if (m_assetHandle.Status != AsyncOperationStatus.Succeeded)
-                throw new Exception($"Failed to load asset");
+            m_asset = (DynGsplatAsset)AssetRef.Asset;
+            if (!m_asset)
+            {
+                m_assetHandle = AssetRef.LoadAssetAsync();
+                m_assetHandle.WaitForCompletion();
+                if (m_assetHandle.Status != AsyncOperationStatus.Succeeded)
+                    throw new Exception("Failed to load asset");
+                m_asset = m_assetHandle.Result;
+            }
 
-            m_asset = m_assetHandle.Result;
             CreateResourcesForAsset();
+            var blockCount = Streaming ? Math.Min(k_slidingWindowSize, m_asset.BlockCount) : m_asset.BlockCount;
 #if UNITY_EDITOR
-            m_blocks = new Block[Application.isPlaying ? m_asset.BlockCount : 1];
+            m_blocks = new Block[Application.isPlaying ? blockCount : 1];
 #else
-            m_blocks = new Block[m_asset.BlockCount];
+            m_blocks = new Block[blockCount];
 #endif
             for (var i = 0; i < m_blocks.Length; i++)
             {
-                var reference = new AssetReferenceT<DynGplatBlockAsset>(AssetRef.AssetGUID)
-                {
-                    SubObjectName = $"Block{i}"
-                };
-                m_blocks[i].Handle = Addressables.LoadAssetAsync<DynGplatBlockAsset>(reference);
+                m_blocks[i].Handle = Addressables.LoadAssetAsync<DynGplatBlockAsset>(m_asset.Blocks[i]);
+
                 m_blocks[i].Handle.WaitForCompletion();
                 if (m_blocks[i].Handle.Status != AsyncOperationStatus.Succeeded)
                     throw new Exception($"Failed to load block {i}");
                 m_blocks[i].Asset = m_blocks[i].Handle.Result;
             }
-
-            UpdateBuffers();
         }
 
         void CreateResourcesForAsset()
@@ -208,6 +244,11 @@ namespace DynGsplat
             }
             else
                 LoadAssetSync();
+            
+            m_currentTime = 0;
+            CurrentFrame = 0;
+            m_prevFrame = uint.MaxValue;
+            m_slidingWindowIndex = k_slidingWindowSize - 1;
         }
 
         void UnloadAsset()
@@ -259,13 +300,12 @@ namespace DynGsplat
             {
                 UnloadAsset();
                 LoadAsset();
-                m_currentTime = 0;
-                CurrentFrame = 0;
-                m_prevFrame = uint.MaxValue;
             }
 
             if (!Valid || !GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
                 return;
+
+            var prevTime = m_currentTime;
 
 #if UNITY_EDITOR
             if (Application.isPlaying && IsPlaying)
@@ -283,8 +323,26 @@ namespace DynGsplat
 
             if (CurrentFrame != m_prevFrame)
             {
-                m_prevFrame = CurrentFrame;
-                UpdateBuffers();
+                if (Streaming && CurrentLocalFrameIndex == 0)
+                    m_slidingWindowIndex = (m_slidingWindowIndex + 1) % k_slidingWindowSize;
+
+                if (CurrentBlock)
+                {
+                    m_prevFrame = CurrentFrame;
+                    if (Streaming && CurrentLocalFrameIndex == 0)
+                    {
+                        _ = LoadBlockAsync();
+                    }
+
+                    UpdateBuffers();
+                }
+                else
+                {
+                    if (Streaming && CurrentLocalFrameIndex == 0)
+                        m_slidingWindowIndex = (m_slidingWindowIndex + k_slidingWindowSize - 1) % k_slidingWindowSize;
+                    CurrentFrame = m_prevFrame;
+                    m_currentTime = prevTime;
+                }
             }
 
             m_renderer.Render(m_asset.SplatCount, transform, CurrentFrameAsset.Bounds, gameObject.layer, GammaToLinear);
@@ -305,12 +363,12 @@ namespace DynGsplat
 
             if (CurrentLocalFrameIndex == 0)
             {
-                m_residualIndex.SetData(CurrentBlock.ResidualIndex.bytes);
-                m_canonicalIndex.SetData(CurrentBlock.CanonicalIndex.bytes);
-                m_codebookColor.SetData(CurrentBlock.CodebookRGB.bytes);
-                m_codebookSH1.SetData(CurrentBlock.CodebookSH1.bytes);
-                m_codebookSH2.SetData(CurrentBlock.CodebookSH2.bytes);
-                m_codebookSH3.SetData(CurrentBlock.CodebookSH3.bytes);
+                m_residualIndex.SetData(CurrentBlock.ResidualIndex);
+                m_canonicalIndex.SetData(CurrentBlock.CanonicalIndex);
+                m_codebookColor.SetData(CurrentBlock.CodebookRGB);
+                m_codebookSH1.SetData(CurrentBlock.CodebookSH1);
+                m_codebookSH2.SetData(CurrentBlock.CodebookSH2);
+                m_codebookSH3.SetData(CurrentBlock.CodebookSH3);
 
                 ComputeShader.SetInt(k_splatCount, (int)m_asset.SplatCount);
                 ComputeShader.SetBuffer(m_kernelLoadBlockData, k_canonicalIndex, m_canonicalIndex);

@@ -3,9 +3,10 @@
   "description": "Dynamic Gaussian Splatting renderer",
   "displayName": "DynGsplat",
   "name": "org.hifihuman.dyngsplat",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "dependencies": {
     "wu.yize.gsplat": "1.0.0",
-    "com.unity.addressables": "1.21.21"
+    "com.unity.addressables": "1.21.21",
+    "com.unity.sharp-zip-lib": "1.4.0"
   }
 }
