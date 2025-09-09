@@ -85,6 +85,7 @@ namespace DynGsplat.Editor
             var asset = ScriptableObject.CreateInstance<DynGsplatAsset>();
             asset.FPS = config.fps;
             asset.FrameCount = (uint)config.frame_count;
+            asset.BlockSize = (uint)config.block_size;
             var blockCount = (int)asset.BlockCount;
             var dataPath = Path.Combine(Path.GetDirectoryName(ctx.assetPath), config.data_path);
 
@@ -117,6 +118,9 @@ namespace DynGsplat.Editor
                 for (var j = 0; j < asset.BlockSize; j++)
                 {
                     var frameIndex = i * asset.BlockSize + j;
+                    if (frameIndex >= asset.FrameCount)
+                        break;
+
                     var frameAsset = ReadPly($"{dataPath}/point_cloud_{frameIndex + config.ply_offset}");
                     asset.SplatCount = Math.Max(frameAsset.SplatCount, asset.SplatCount);
                     frameAsset.name = $"Frame{frameIndex}";

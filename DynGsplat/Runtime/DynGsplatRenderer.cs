@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Threading;
 using System.Threading.Tasks;
 using Gsplat;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -19,29 +17,22 @@ namespace DynGsplat
             public AsyncOperationHandle<DynGplatBlockAsset> Handle;
         }
 
-
         public AssetReferenceT<DynGsplatAsset> AssetRef;
         public bool AsyncLoading = true;
+        public bool IsPlaying = true;
+        public bool GammaToLinear;
 
         string m_prevAssetGUID;
 
         ComputeShader ComputeShader => DynGsplatSettings.Instance.ComputeShader;
 
         DynGsplatAsset m_asset;
+        GsplatRendererImpl m_renderer;
         AsyncOperationHandle<DynGsplatAsset> m_assetHandle;
-
         Block[] m_blocks;
-
         CancellationTokenSource m_tokenSource;
 
-        public ISorterResource SorterResource { get; private set; }
-        MaterialPropertyBlock m_propertyBlock;
-        GraphicsBuffer m_positionBuffer;
-        GraphicsBuffer m_scaleBuffer;
-        GraphicsBuffer m_rotationBuffer;
-        GraphicsBuffer m_colorBuffer;
-        GraphicsBuffer m_shBuffer;
-        GraphicsBuffer m_orderBuffer;
+        public ISorterResource SorterResource => m_renderer.SorterResource;
 
         GraphicsBuffer m_opacityBuffer;
         GraphicsBuffer m_canonicalIndex;
@@ -50,9 +41,7 @@ namespace DynGsplat
         GraphicsBuffer m_codebookSH1;
         GraphicsBuffer m_codebookSH2;
         GraphicsBuffer m_codebookSH3;
-
-
-        public bool IsPlaying = true;
+        
         public uint CurrentFrame { get; private set; }
         float m_currentTime = 0;
         uint m_prevFrame = uint.MaxValue;
@@ -67,24 +56,13 @@ namespace DynGsplat
             m_asset &&
             m_blocks != null &&
             CurrentBlock &&
-            m_positionBuffer != null &&
-            m_scaleBuffer != null &&
-            m_rotationBuffer != null &&
-            m_colorBuffer != null &&
-            m_shBuffer != null;
+            m_renderer != null;
 
         public uint SplatCount => m_asset ? m_asset.SplatCount : 0;
 
-        static readonly int k_orderBuffer = Shader.PropertyToID("_OrderBuffer");
-        static readonly int k_positionBuffer = Shader.PropertyToID("_PositionBuffer");
-        static readonly int k_scaleBuffer = Shader.PropertyToID("_ScaleBuffer");
-        static readonly int k_rotationBuffer = Shader.PropertyToID("_RotationBuffer");
+        static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
         static readonly int k_colorBuffer = Shader.PropertyToID("_ColorBuffer");
         static readonly int k_shBuffer = Shader.PropertyToID("_SHBuffer");
-        static readonly int k_matrixM = Shader.PropertyToID("_MATRIX_M");
-        static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
-        static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
-
         static readonly int k_opacityBuffer = Shader.PropertyToID("_OpacityBuffer");
         static readonly int k_canonicalIndex = Shader.PropertyToID("_CanonicalIndex");
         static readonly int k_residualIndex = Shader.PropertyToID("_ResidualIndex");
@@ -93,6 +71,7 @@ namespace DynGsplat
         static readonly int k_codebookSH2 = Shader.PropertyToID("_CodebookSH2");
         static readonly int k_codebookSH3 = Shader.PropertyToID("_CodebookSH3");
         static readonly int k_localFrame = Shader.PropertyToID("_LocalFrame");
+        static readonly int k_blockSize = Shader.PropertyToID("_BlockSize");
 
         const int k_groupSize = 1024;
         int m_kernelUpdateOpacity = -1;
@@ -111,8 +90,6 @@ namespace DynGsplat
                     throw new Exception("Failed to load asset");
 
                 m_asset = m_assetHandle.Result;
-                CreateResourcesForAsset();
-
                 m_blocks = new Block[m_asset.BlockCount];
                 for (var i = 0; i < m_blocks.Length; i++)
                 {
@@ -128,13 +105,12 @@ namespace DynGsplat
                     m_blocks[i].Asset = m_blocks[i].Handle.Result;
                 }
 
-                UpdateBuffers();
+                CreateResourcesForAsset();
             }
             catch (OperationCanceledException)
             {
             }
         }
-
 
         void LoadAssetSync()
         {
@@ -166,26 +142,12 @@ namespace DynGsplat
             UpdateBuffers();
         }
 
-
         void CreateResourcesForAsset()
         {
             if (!m_asset)
-            {
                 return;
-            }
 
-            m_positionBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)m_asset.SplatCount,
-                System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
-            m_scaleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)m_asset.SplatCount,
-                System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
-            m_rotationBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)m_asset.SplatCount,
-                System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4)));
-            m_colorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)m_asset.SplatCount,
-                System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4)));
-            m_shBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)m_asset.SplatCount * 15,
-                System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
-            m_orderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)m_asset.SplatCount,
-                sizeof(uint));
+            m_renderer = new GsplatRendererImpl(m_asset.SplatCount, m_asset.SHBands);
 
             m_opacityBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)m_asset.SplatCount,
                 sizeof(float));
@@ -201,30 +163,11 @@ namespace DynGsplat
                 sizeof(uint));
             m_codebookSH3 = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)m_asset.CodebookSH3Size,
                 sizeof(uint));
-
-            SorterResource =
-                GsplatSorter.Instance.CreateSorterResource(m_asset.SplatCount, m_positionBuffer, m_orderBuffer);
-
-            m_propertyBlock ??= new MaterialPropertyBlock();
-            m_propertyBlock.SetInt(k_splatCount, (int)m_asset.SplatCount);
-            m_propertyBlock.SetBuffer(k_orderBuffer, m_orderBuffer);
-            m_propertyBlock.SetBuffer(k_positionBuffer, m_positionBuffer);
-            m_propertyBlock.SetBuffer(k_scaleBuffer, m_scaleBuffer);
-            m_propertyBlock.SetBuffer(k_rotationBuffer, m_rotationBuffer);
-            m_propertyBlock.SetBuffer(k_colorBuffer, m_colorBuffer);
-            m_propertyBlock.SetBuffer(k_shBuffer, m_shBuffer);
         }
 
         void DisposeResourcesForAsset()
         {
-            m_positionBuffer?.Dispose();
-            m_scaleBuffer?.Dispose();
-            m_rotationBuffer?.Dispose();
-            m_colorBuffer?.Dispose();
-            m_shBuffer?.Dispose();
-            m_orderBuffer?.Dispose();
-            SorterResource?.Dispose();
-
+            m_renderer?.Dispose();
             m_opacityBuffer?.Dispose();
             m_canonicalIndex?.Dispose();
             m_residualIndex?.Dispose();
@@ -233,12 +176,14 @@ namespace DynGsplat
             m_codebookSH2?.Dispose();
             m_codebookSH3?.Dispose();
 
-            m_positionBuffer = null;
-            m_scaleBuffer = null;
-            m_rotationBuffer = null;
-            m_colorBuffer = null;
-            m_shBuffer = null;
-            m_orderBuffer = null;
+            m_renderer = null;
+            m_opacityBuffer = null;
+            m_canonicalIndex = null;
+            m_residualIndex = null;
+            m_codebookColor = null;
+            m_codebookSH1 = null;
+            m_codebookSH2 = null;
+            m_codebookSH3 = null;
         }
 
         void LoadAsset()
@@ -261,7 +206,6 @@ namespace DynGsplat
                 m_tokenSource = new CancellationTokenSource();
                 _ = LoadAssetAsync(m_tokenSource.Token);
             }
-
             else
                 LoadAssetSync();
         }
@@ -288,10 +232,7 @@ namespace DynGsplat
             }
 
             if (m_assetHandle.IsValid())
-            {
                 Addressables.Release(m_assetHandle);
-            }
-
             m_asset = null;
         }
 
@@ -324,10 +265,7 @@ namespace DynGsplat
             }
 
             if (!Valid || !GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
-            {
                 return;
-            }
-
 
 #if UNITY_EDITOR
             if (Application.isPlaying && IsPlaying)
@@ -349,31 +287,19 @@ namespace DynGsplat
                 UpdateBuffers();
             }
 
-
-            m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
-            m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
-            var rp = new RenderParams(GsplatSettings.Instance.Materials[m_asset.SHBands])
-            {
-                worldBounds = GsplatUtils.CalcWorldBounds(CurrentFrameAsset.Bounds, transform),
-                matProps = m_propertyBlock,
-                layer = gameObject.layer
-            };
-
-            Graphics.RenderMeshPrimitives(rp, GsplatSettings.Instance.Mesh, 0,
-                (int)Math.Ceiling(m_asset.SplatCount / (double)GsplatSettings.Instance.SplatInstanceSize));
+            m_renderer.Render(m_asset.SplatCount, transform, CurrentFrameAsset.Bounds, gameObject.layer, GammaToLinear);
         }
 
         void UpdateBuffers()
         {
-            m_positionBuffer.SetData(CurrentFrameAsset.Positions);
-            m_scaleBuffer.SetData(CurrentFrameAsset.Scales);
-            m_rotationBuffer.SetData(CurrentFrameAsset.Rotations);
+            m_renderer.PositionBuffer.SetData(CurrentFrameAsset.Positions);
+            m_renderer.ScaleBuffer.SetData(CurrentFrameAsset.Scales);
+            m_renderer.RotationBuffer.SetData(CurrentFrameAsset.Rotations);
             m_opacityBuffer.SetData(CurrentFrameAsset.Opacities);
-
 
             ComputeShader.SetInt(k_splatCount, (int)m_asset.SplatCount);
             ComputeShader.SetBuffer(m_kernelUpdateOpacity, k_opacityBuffer, m_opacityBuffer);
-            ComputeShader.SetBuffer(m_kernelUpdateOpacity, k_colorBuffer, m_colorBuffer);
+            ComputeShader.SetBuffer(m_kernelUpdateOpacity, k_colorBuffer, m_renderer.ColorBuffer);
             ComputeShader.Dispatch(m_kernelUpdateOpacity,
                 (int)Math.Ceiling(m_asset.SplatCount / (float)k_groupSize), 1, 1);
 
@@ -392,21 +318,22 @@ namespace DynGsplat
                 ComputeShader.SetBuffer(m_kernelLoadBlockData, k_codebookSH1, m_codebookSH1);
                 ComputeShader.SetBuffer(m_kernelLoadBlockData, k_codebookSH2, m_codebookSH2);
                 ComputeShader.SetBuffer(m_kernelLoadBlockData, k_codebookSH3, m_codebookSH3);
-                ComputeShader.SetBuffer(m_kernelLoadBlockData, k_colorBuffer, m_colorBuffer);
-                ComputeShader.SetBuffer(m_kernelLoadBlockData, k_shBuffer, m_shBuffer);
+                ComputeShader.SetBuffer(m_kernelLoadBlockData, k_colorBuffer, m_renderer.ColorBuffer);
+                ComputeShader.SetBuffer(m_kernelLoadBlockData, k_shBuffer, m_renderer.SHBuffer);
                 ComputeShader.Dispatch(m_kernelLoadBlockData,
                     (int)Math.Ceiling(m_asset.SplatCount / (float)k_groupSize), 1, 1);
             }
             else
             {
                 ComputeShader.SetInt(k_localFrame, (int)CurrentLocalFrameIndex);
+                ComputeShader.SetInt(k_blockSize, (int)m_asset.BlockSize);
                 ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_residualIndex, m_residualIndex);
                 ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookColor, m_codebookColor);
                 ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookSH1, m_codebookSH1);
                 ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookSH2, m_codebookSH2);
                 ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookSH3, m_codebookSH3);
-                ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_colorBuffer, m_colorBuffer);
-                ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_shBuffer, m_shBuffer);
+                ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_colorBuffer, m_renderer.ColorBuffer);
+                ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_shBuffer, m_renderer.SHBuffer);
                 const int groupSizeX = k_groupSize / 4;
                 ComputeShader.Dispatch(m_kernelUpdateBlockData,
                     ((int)m_asset.SplatCount + groupSizeX - 1) / groupSizeX, 1, 1);

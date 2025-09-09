@@ -14,12 +14,12 @@ This repository contains code for compressing 3DGS PLY sequences and a Unity pac
 
 Our provided install method is based on Conda package and environment management:
 
-Create a new environment
+Create a new environment.
 ```shell
 conda create -n compress python=3.9
 conda activate compress
 ```
-First install CUDA and PyTorch, our code is evaluated on CUDA 12.1 and PyTorch 2.1.2+cu121. Then install the following dependencies:
+First install CUDA and PyTorch, our code is evaluated on CUDA 12.1 and PyTorch 2.1.2. Then install the following dependencies:
 ```shell
 cd CompressScripts/
 pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu121
@@ -71,11 +71,12 @@ After each `.dgs` asset is successfully imported, it will generate a "Dyn Gsplat
 
 Create a new `Game Object` in the scene, then add and configure the `Dyn Gsplat Renderer` component for it. At runtime, all frames will be loaded into memory, so please ensure you have enough available memory.
 
-| Property      | Description                                 |
-| ------------- | ------------------------------------------- |
-| Asset Ref     | Assign the `Dyn Gsplat Asset` to be played. |
-| Async Loading | Toggles asynchronous loading on or off.     |
-| Is Playing    | Plays/Pauses the playback.                  |
+| Property        | Description                                                  |
+| --------------- | ------------------------------------------------------------ |
+| Asset Ref       | Assign the `Dyn Gsplat Asset` to be played.                  |
+| Async Loading   | Toggles asynchronous loading on or off.                      |
+| Is Playing      | Plays/Pauses the playback.                                   |
+| Gamma To Linear | Coverts color space. See [Gsplat/README.md](https://github.com/wuyize25/gsplat-unity/blob/main/README.md). |
 
 ## License
 

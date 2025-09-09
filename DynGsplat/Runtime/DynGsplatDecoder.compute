@@ -45,11 +45,12 @@ void LoadBlockData(uint3 id : SV_DispatchThreadID)
 
 StructuredBuffer<int> _ResidualIndex;
 int _LocalFrame;
+int _BlockSize;
 
 [numthreads(GROUP_SIZE / 4, 4, 1)]
 void UpdateBlockData(uint3 id : SV_DispatchThreadID)
 {
-    const int time_len = 19;
+    const int time_len = _BlockSize - 1;
     const int num_codebook = 4;
     int offset = _LocalFrame - 1;
 

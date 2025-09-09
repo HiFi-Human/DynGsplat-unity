@@ -17,7 +17,7 @@ namespace DynGsplat
         public uint CodebookSH1Size;
         public uint CodebookSH2Size;
         public uint CodebookSH3Size;
-        public uint BlockSize => 20;
+        public uint BlockSize;
         public uint BlockCount => (uint)Math.Ceiling((double)FrameCount / BlockSize);
         public float Duration => FrameCount / FPS;
     }
