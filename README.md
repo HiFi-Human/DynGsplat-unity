@@ -32,7 +32,8 @@ We split the PLY sequence into blocks at fixed intervals.
 For each block, we learn RGB and SH codebooks via vector quantization and obtain indices.
 Using the first frame’s indices as the baseline, later frames store only sparse differences as (index, value) pairs.
 
-For more detail, please refer to [DualGS Paper Section 4 COMPRESSION](https://arxiv.org/pdf/2409.08353).
+Note that our method adopts only part of the compression scheme described in [DualGS Paper Section 4 COMPRESSION](https://arxiv.org/pdf/2409.08353), specifically the module for compressing RGB and SH attributes, which accounts for roughly one-third of the full algorithm.
+
 ```shell
 python compress.py \
   --data_path <path to ply path> \
