@@ -112,11 +112,24 @@ If you find this code useful for your research, please cite us using the followi
     pages={11349-11360}
 }
 
-@article{hong2025beam,
-  title={BEAM: Bridging Physically-based Rendering and Gaussian Modeling for Relightable Volumetric Video},
-  author={Hong, Yu and Wu, Yize and Shen, Zhehao and Guo, Chengcheng and Jiang, Yuheng and Zhang, Yingliang and Yu, Jingyi and Xu, Lan},
-  journal={arXiv preprint arXiv:2502.08297},
-  year={2025}
+@misc{hong2025beam,
+      title={BEAM: Bridging Physically-based Rendering and Gaussian Modeling for Relightable Volumetric Video}, 
+      author={Yu Hong and Yize Wu and Zhehao Shen and Chengcheng Guo and Yuheng Jiang and Yingliang Zhang and Jingyi Yu and Lan Xu},
+      year={2025},
+      eprint={2502.08297},
+      archivePrefix={arXiv},
+      primaryClass={cs.GR},
+      url={https://arxiv.org/abs/2502.08297}, 
+}
+
+@misc{jiang2025topology,
+      title={Topology-Aware Optimization of Gaussian Primitives for Human-Centric Volumetric Videos}, 
+      author={Yuheng Jiang and Chengcheng Guo and Yize Wu and Yu Hong and Shengkun Zhu and Zhehao Shen and Yingliang Zhang and Shaohui Jiao and Zhuo Su and Lan Xu and Marc Habermann and Christian Theobalt},
+      year={2025},
+      eprint={2509.07653},
+      archivePrefix={arXiv},
+      primaryClass={cs.GR},
+      url={https://arxiv.org/abs/2509.07653}, 
 }
 ```
 
