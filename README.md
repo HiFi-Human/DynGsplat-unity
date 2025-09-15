@@ -2,6 +2,8 @@
 
 This repository contains code for compressing 3DGS PLY sequences and a Unity package for rendering and playing the compressed sequences in Unity. The Unity package depends on [wuyize25/gsplat-unity](https://github.com/wuyize25/gsplat-unity), which is also included in the repository as a submodule.
 
+![video](README.assets/video.webp)
+
 ## TODO
 
 - [x] RGB & SH compression based on codebook
