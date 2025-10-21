@@ -53,12 +53,11 @@ namespace DynGsplat
         uint CurrentLocalFrameIndex => CurrentFrame % m_asset.BlockSize;
 
         DynGplatBlockAsset CurrentBlock =>
-            m_blocks[Streaming
 #if UNITY_EDITOR
-                     && Application.isPlaying
+            m_blocks[Streaming && Application.isPlaying ? m_slidingWindowIndex : CurrentBlockIndex].Asset;
+#else
+            m_blocks[Streaming ? m_slidingWindowIndex : CurrentBlockIndex].Asset;
 #endif
-                ? m_slidingWindowIndex
-                : CurrentBlockIndex].Asset;
 
         DynGsplatFrameAsset CurrentFrameAsset => CurrentBlock.Frames[CurrentLocalFrameIndex];
 

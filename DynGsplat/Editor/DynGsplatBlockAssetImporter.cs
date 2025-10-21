@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Gsplat.Editor;
@@ -72,7 +73,7 @@ namespace DynGsplat.Editor
                 sb.Append(b.ToString("x2"));
             return sb.ToString();
         }
-        
+
         DynGsplatFrameAsset ReadPly(string plyPath)
         {
             var frameAsset = ScriptableObject.CreateInstance<DynGsplatFrameAsset>();
@@ -94,28 +95,23 @@ namespace DynGsplat.Editor
                 frameAsset.Scales = new Vector3[vertexCount];
                 frameAsset.Rotations = new Vector4[vertexCount];
 
-
-                var buffer = new NativeArray<byte>(propertyCount * 4, Allocator.Temp);
+                var buffer = new byte[propertyCount * sizeof(float)];
                 for (uint i = 0; i < vertexCount; i++)
                 {
                     var readBytes = fs.Read(buffer);
                     if (readBytes != propertyCount * 4)
                         throw new IOException(
                             $"{plyPath} read error, unexpected end of file, got {readBytes} bytes at vertex {i}");
-                    var properties = buffer.Reinterpret<float>(1);
+                    var properties = MemoryMarshal.Cast<byte, float>(buffer);
                     frameAsset.Positions[i] = new Vector3(properties[0], properties[1], properties[2]);
                     frameAsset.Rotations[i] = new Vector4(properties[3], properties[4], properties[5], properties[6])
                         .normalized;
-                    frameAsset.Scales[i] = new Vector3((properties[7]), (properties[8]),
-                        (properties[9]));
-                    frameAsset.Opacities[i] = (properties[10]);
-
+                    frameAsset.Scales[i] = new Vector3(properties[7], properties[8], properties[9]);
+                    frameAsset.Opacities[i] = properties[10];
 
                     if (i == 0) bounds = new Bounds(frameAsset.Positions[i], Vector3.zero);
                     else bounds.Encapsulate(frameAsset.Positions[i]);
                 }
-
-                buffer.Dispose();
             }
 
             frameAsset.Bounds = bounds;

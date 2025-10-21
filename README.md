@@ -12,6 +12,10 @@ This repository contains code for compressing 3DGS PLY sequences and a Unity pac
 
 ## Changelog
 
+### v1.1.1 - 2025/10/21
+
+- Lowered the Unity version requirement to 2021.
+
 ### v1.1.0 - 2025/09/12
 
 - Added a streaming option that, when enabled, no longer loads all frame data into memory.
