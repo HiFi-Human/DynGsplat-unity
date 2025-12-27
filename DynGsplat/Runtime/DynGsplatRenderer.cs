@@ -120,9 +120,9 @@ namespace DynGsplat
                         throw new Exception($"Failed to load block {i}");
                     m_blocks[i].Asset = m_blocks[i].Handle.Result;
                 }
-                
+
                 CreateResourcesForAsset();
-                UpdateBuffers();
+                UpdateBuffers(true);
             }
             catch (OperationCanceledException)
             {
@@ -243,7 +243,7 @@ namespace DynGsplat
             }
             else
                 LoadAssetSync();
-            
+
             m_currentTime = 0;
             CurrentFrame = 0;
             m_prevFrame = uint.MaxValue;
@@ -327,13 +327,14 @@ namespace DynGsplat
 
                 if (CurrentBlock)
                 {
+                    var blockChanged = m_prevFrame / m_asset.BlockSize != CurrentBlockIndex;
                     m_prevFrame = CurrentFrame;
                     if (Streaming && CurrentLocalFrameIndex == 0)
                     {
                         _ = LoadBlockAsync();
                     }
 
-                    UpdateBuffers();
+                    UpdateBuffers(blockChanged);
                 }
                 else
                 {
@@ -347,7 +348,7 @@ namespace DynGsplat
             m_renderer.Render(m_asset.SplatCount, transform, CurrentFrameAsset.Bounds, gameObject.layer, GammaToLinear);
         }
 
-        void UpdateBuffers()
+        void UpdateBuffers(bool updateBlock)
         {
             m_renderer.PositionBuffer.SetData(CurrentFrameAsset.Positions);
             m_renderer.ScaleBuffer.SetData(CurrentFrameAsset.Scales);
@@ -360,7 +361,7 @@ namespace DynGsplat
             ComputeShader.Dispatch(m_kernelUpdateOpacity,
                 (int)Math.Ceiling(m_asset.SplatCount / (float)k_groupSize), 1, 1);
 
-            if (CurrentLocalFrameIndex == 0)
+            if (updateBlock)
             {
                 m_residualIndex.SetData(CurrentBlock.ResidualIndex);
                 m_canonicalIndex.SetData(CurrentBlock.CanonicalIndex);
@@ -380,21 +381,20 @@ namespace DynGsplat
                 ComputeShader.Dispatch(m_kernelLoadBlockData,
                     (int)Math.Ceiling(m_asset.SplatCount / (float)k_groupSize), 1, 1);
             }
-            else
-            {
-                ComputeShader.SetInt(k_localFrame, (int)CurrentLocalFrameIndex);
-                ComputeShader.SetInt(k_blockSize, (int)m_asset.BlockSize);
-                ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_residualIndex, m_residualIndex);
-                ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookColor, m_codebookColor);
-                ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookSH1, m_codebookSH1);
-                ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookSH2, m_codebookSH2);
-                ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookSH3, m_codebookSH3);
-                ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_colorBuffer, m_renderer.ColorBuffer);
-                ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_shBuffer, m_renderer.SHBuffer);
-                const int groupSizeX = k_groupSize / 4;
-                ComputeShader.Dispatch(m_kernelUpdateBlockData,
-                    ((int)m_asset.SplatCount + groupSizeX - 1) / groupSizeX, 1, 1);
-            }
+
+            if (CurrentLocalFrameIndex == 0) return;
+            ComputeShader.SetInt(k_localFrame, (int)CurrentLocalFrameIndex);
+            ComputeShader.SetInt(k_blockSize, (int)m_asset.BlockSize);
+            ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_residualIndex, m_residualIndex);
+            ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookColor, m_codebookColor);
+            ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookSH1, m_codebookSH1);
+            ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookSH2, m_codebookSH2);
+            ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_codebookSH3, m_codebookSH3);
+            ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_colorBuffer, m_renderer.ColorBuffer);
+            ComputeShader.SetBuffer(m_kernelUpdateBlockData, k_shBuffer, m_renderer.SHBuffer);
+            const int groupSizeX = k_groupSize / 4;
+            ComputeShader.Dispatch(m_kernelUpdateBlockData,
+                ((int)m_asset.SplatCount + groupSizeX - 1) / groupSizeX, 1, 1);
         }
     }
 }
