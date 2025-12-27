@@ -108,17 +108,17 @@ If you find this code useful for your research, please cite us using the followi
 
 ```bibtex
 @article{jiang2024robust,
-  title={Robust dual gaussian splatting for immersive human-centric volumetric videos},
-  author={Jiang, Yuheng and Shen, Zhehao and Hong, Yu and Guo, Chengcheng and Wu, Yize and Zhang, Yingliang and Yu, Jingyi and Xu, Lan},
-  journal={ACM Transactions on Graphics (TOG)},
-  volume={43},
-  number={6},
-  pages={1--15},
-  year={2024},
-  publisher={ACM New York, NY, USA}
+    title={Robust dual gaussian splatting for immersive human-centric volumetric videos},
+    author={Jiang, Yuheng and Shen, Zhehao and Hong, Yu and Guo, Chengcheng and Wu, Yize and Zhang, Yingliang and Yu, Jingyi and Xu, Lan},
+    journal={ACM Transactions on Graphics (TOG)},
+    volume={43},
+    number={6},
+    pages={1--15},
+    year={2024},
+    publisher={ACM New York, NY, USA}
 }
 
-@InProceedings{Jiang2025reperformer,
+@InProceedings{jiang2025reperformer,
     author={Jiang, Yuheng and Shen, Zhehao and Guo, Chengcheng and Hong, Yu and Su, Zhuo and Zhang, Yingliang and Habermann, Marc and Xu, Lan},
     title={RePerformer: Immersive Human-centric Volumetric Videos from Playback to Photoreal Reperformance},
     booktitle={Proceedings of the Computer Vision and Pattern Recognition Conference (CVPR)},
@@ -127,24 +127,32 @@ If you find this code useful for your research, please cite us using the followi
     pages={11349-11360}
 }
 
-@misc{hong2025beam,
-      title={BEAM: Bridging Physically-based Rendering and Gaussian Modeling for Relightable Volumetric Video}, 
-      author={Yu Hong and Yize Wu and Zhehao Shen and Chengcheng Guo and Yuheng Jiang and Yingliang Zhang and Jingyi Yu and Lan Xu},
-      year={2025},
-      eprint={2502.08297},
-      archivePrefix={arXiv},
-      primaryClass={cs.GR},
-      url={https://arxiv.org/abs/2502.08297}, 
+@inproceedings{hong2025beam,
+    author = {Hong, Yu and Wu, Yize and Shen, Zhehao and Guo, Chengcheng and Jiang, Yuheng and Zhang, Yingliang and Hu, Qiang and Yu, Jingyi and Xu, Lan},
+    title = {BEAM: Bridging Physically-based Rendering and Gaussian Modeling for Relightable Volumetric Video},
+    year = {2025},
+    isbn = {9798400720352},
+    publisher = {Association for Computing Machinery},
+    url = {https://doi.org/10.1145/3746027.3755233},
+    doi = {10.1145/3746027.3755233},
+    booktitle = {Proceedings of the 33rd ACM International Conference on Multimedia},
+    pages = {7968–7977},
+    numpages = {10},
+    series = {MM '25}
 }
 
-@misc{jiang2025topology,
-      title={Topology-Aware Optimization of Gaussian Primitives for Human-Centric Volumetric Videos}, 
-      author={Yuheng Jiang and Chengcheng Guo and Yize Wu and Yu Hong and Shengkun Zhu and Zhehao Shen and Yingliang Zhang and Shaohui Jiao and Zhuo Su and Lan Xu and Marc Habermann and Christian Theobalt},
-      year={2025},
-      eprint={2509.07653},
-      archivePrefix={arXiv},
-      primaryClass={cs.GR},
-      url={https://arxiv.org/abs/2509.07653}, 
+@inproceedings{jiang2025topology,
+    author = {Jiang, Yuheng and Guo, Chengcheng and Wu, Yize and Hong, Yu and Zhu, Shengkun and Shen, Zhehao and Zhang, Yingliang and Jiao, Shaohui and Su, Zhuo and Xu, Lan and Habermann, Marc and Theobalt, Christian},
+    title = {Topology-Aware Optimization of Gaussian Primitives for Human-Centric Volumetric Videos},
+    year = {2025},
+    isbn = {9798400721373},
+    publisher = {Association for Computing Machinery},
+    url = {https://doi.org/10.1145/3757377.3763975},
+    doi = {10.1145/3757377.3763975},
+    booktitle = {Proceedings of the SIGGRAPH Asia 2025 Conference Papers},
+    articleno = {2},
+    numpages = {12},
+    series = {SA Conference Papers '25}
 }
 ```
 
